@@ -1,6 +1,11 @@
 const http = require('http');
 const https = require('https');
 
+/**
+ * Get a page title using a regular expression
+ *
+ * @param {*} url
+ */
 function getPageTitle(url) {
   const protocol = url.substr(0, 5).toLowerCase() === 'https' ? https : http;
   const titleRegEx = /(<\s*title[^>]*>(.+?)<\s*\/\s*title)>/gi;
