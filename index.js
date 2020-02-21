@@ -2,46 +2,64 @@ const fs = require('fs');
 const { join } = require('path');
 
 const ytdl = require('ytdl-core');
-const urls = process.argv.slice(2);
 
-const getPageTitle = require('./modules/pageTitle');
+const validateUrl = require('./modules/validateUrl');
+const uniquePath = require('./modules/uniquePath');
+const openFolder = require('./modules/openFolder');
 
-if (!urls) {
-  return console.log(`Missing args (urls)`);
+const args = process.argv.slice(2);
+
+const AUDIO_FLAGS = '--audio|-audio|--a|-a|--mp3|-mp3'.split('|');
+const FORCE_FLAGS = '--force|-force|--f|-f'.split('|');
+const audioOnly = args.filter(param => AUDIO_FLAGS.includes(param)).length > 0;
+const forceSave = args.filter(param => FORCE_FLAGS.includes(param)).length > 0;
+
+const saveDir = join(__dirname, 'downloads');
+
+if (!args) {
+  return console.log(`Missing args`);
 }
 
-urls.forEach(async url => {
+if (!fs.existsSync(saveDir)) {
+  fs.mkdirSync(saveDir);
+}
+
+args
+.filter(param => !AUDIO_FLAGS.includes(param))
+.forEach(async url => {
+  const pathTemp = join(saveDir, `${+new Date}.tmp`);
+  let pathClean, id, title;
+
   try {
-    const shortPattern = new RegExp(/^https?\:\/\/youtu\.be\/(\w{11})&?/);
-    const fullPattern = new RegExp(/^https?\:\/\/www\.youtube\.com\/watch\?v=(\w{11})&?/);
+    url = validateUrl(url);
 
-    // Match urls like https://youtu.be/9Rah1F1zq1k
-    if (shortPattern.test(url)) {
-      url = `https://www.youtube.com/watch?v=${shortPattern.exec(url)[1]}`;
-    }
+    ytdl(url, {
+      filter: audioOnly ? 'audioonly' : format => format.container === 'mp4',
+      quality: 'highest',
+    })
+    .on('info', info => {
+      title = info.title.replace(/[/\\?%*:|"<>]/g, '');
+      id = info.video_id;
 
-    // Match urls like https://www.youtube.com/watch?v=9Rah1F1zq1k
-    if (!fullPattern.test(url)) {
-      throw new Error(`Bad url!`);
-    }
+      pathClean = join(saveDir, `${title} - ${id}.mp${audioOnly ? '3' : '4'}`);
+    })
+    .on('end', _ => {
+      openFolder(saveDir);
 
-    const key = url.split('?')[1].split('=')[1];
-    const pageTitle = await getPageTitle(url)
-    .then(title => title.replace(/[/\\?%*:|"<>]/g, ''));
-    const path = join(__dirname, 'downloads', `${pageTitle} - ${key}.mp4`);
+      if (fs.existsSync(pathClean)) {
+        if (!forceSave) {
+          return console.log(`File already exists:  ${pathClean}`);
+        }
 
-    if (fs.existsSync(path)) {
-      console.log(`File already exists:  ${path}`);
-    } else {
-      ytdl(url, {
-        filter: format => format.container === 'mp4',
-        quality: 'highest',
-      })
-      .pipe(fs.createWriteStream(path));
-      
-      require('child_process')
-      .exec(`start "" "${join(__dirname, 'downloads')}"`);
-    }
+        pathClean = uniquePath(pathClean);
+      }
+
+      fs.renameSync(pathTemp, pathClean);
+    })
+    .on('error', error => {
+      throw error;
+    })
+    .pipe(fs.createWriteStream(pathTemp));
   } catch(error) {
     console.log(`Failed to download ${url}:  ${error.message}`);
   }
