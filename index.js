@@ -5,14 +5,13 @@ const ytdl = require('ytdl-core');
 
 const validateUrl = require('./modules/validateUrl');
 const uniquePath = require('./modules/uniquePath');
-const openFolder = require('./modules/openFolder');
+const openPathInFileManager = require('./modules/openPathInFileManager');
+const concurrentProgressBar = require('./modules/concurrentProgressBar');
 
 const args = process.argv.slice(2);
 
 const AUDIO_FLAGS = '--audio|-audio|--a|-a|--mp3|-mp3'.split('|');
-const FORCE_FLAGS = '--force|-force|--f|-f'.split('|');
 const audioOnly = args.filter(param => AUDIO_FLAGS.includes(param)).length > 0;
-const forceSave = args.filter(param => FORCE_FLAGS.includes(param)).length > 0;
 
 const saveDir = join(__dirname, 'downloads');
 
@@ -28,7 +27,7 @@ args
 .filter(param => !AUDIO_FLAGS.includes(param))
 .forEach(async url => {
   const pathTemp = join(saveDir, `${+new Date}.tmp`);
-  let pathClean, id, title;
+  let pathClean, id, title, progressHandler;
 
   try {
     url = validateUrl(url);
@@ -44,8 +43,6 @@ args
       pathClean = join(saveDir, `${title} - ${id}.mp${audioOnly ? '3' : '4'}`);
     })
     .on('end', _ => {
-      openFolder(saveDir);
-
       if (fs.existsSync(pathClean)) {
         if (!forceSave) {
           return console.log(`File already exists:  ${pathClean}`);
@@ -55,9 +52,17 @@ args
       }
 
       fs.renameSync(pathTemp, pathClean);
+      openPathInFileManager(saveDir);
     })
     .on('error', error => {
       throw error;
+    })
+    .on('progress', (chunk, partial, total) => {
+      if (progressHandler) {
+        progressHandler(partial/total);
+      } else {
+        progressHandler = concurrentProgressBar(total);
+      }
     })
     .pipe(fs.createWriteStream(pathTemp));
   } catch(error) {
