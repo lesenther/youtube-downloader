@@ -10,7 +10,7 @@ const btoa = data => new Buffer.from(data.toString(), 'binary').toString('base64
  * @param {Function} suffix Function to generate a string to append to the path
  * @returns {String} Unique path
  */
-function uniquePath(path, suffix = _ => '.'+btoa(+new Date)) {
+function uniquePath(path, suffix = _ => `.${btoa(+new Date)}`) {
   let _path = path;
   const ext = path.slice(path.length - path.split('').reverse().indexOf('.'));
 
