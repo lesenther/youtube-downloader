@@ -1,5 +1,6 @@
 const assert = require('assert');
-const progress = require('../modules/concurrentProgressBar');
+const Progress = require('../modules/ConcurrentProgressBar');
+const progress = new Progress();
 
 describe('test multiprogress', _ => {
 
@@ -10,7 +11,7 @@ describe('test multiprogress', _ => {
 
     const int = setInterval(_ => {
       percent1 += 0.1;
-      bar1(percent1);
+      progress.update(bar1, percent1);
 
       if (percent1 >= 1) {
         clearInterval(int);
@@ -30,8 +31,8 @@ describe('test multiprogress', _ => {
       if (percent1 < 1) percent1 += 0.1;
       if (percent2 < 1) percent2 += 0.05;
 
-      bar1(percent1);
-      bar2(percent2);
+      progress.update(bar1, percent1);
+      progress.update(bar2, percent2);
 
       if (percent1 >= 1 && percent2 >= 1) {
         clearInterval(int);
@@ -53,9 +54,9 @@ describe('test multiprogress', _ => {
       if (percent2 < 1) percent2 += 0.05;
       if (percent3 < 1) percent3 += 0.01;
 
-      bar1(percent1);
-      bar2(percent2);
-      bar3(percent3);
+      progress.update(bar1, percent1);
+      progress.update(bar2, percent2);
+      progress.update(bar3, percent3);
 
       if (percent1 >= 1 && percent2 >= 1 && percent3 >= 1) {
         clearInterval(int);
