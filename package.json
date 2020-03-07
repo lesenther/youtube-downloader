@@ -9,7 +9,8 @@
   "author": "Logan Esenther (logan@cal.berkeley.edu)",
   "license": "ISC",
   "dependencies": {
+    "get-video-duration": "^1.0.3",
     "progress": "^2.0.3",
-    "ytdl-core": "^1.0.8"
+    "ytdl-core": "^1.0.9"
   }
 }
